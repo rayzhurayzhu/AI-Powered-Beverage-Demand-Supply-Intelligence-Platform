@@ -15,36 +15,71 @@ For example, Asia Pacific Breweries Singapore (APBS), HEINEKEN’s wholly owned 
 
 # What it Does
 As a role of Data & AI Business Partner in APBS, in this project.
+
 Says how much of each SKU we should import, when we should replenish it, and how Commercial and Supply Chain teams can identify stockout or excess-inventory risks before they happen.
 
-Power BI Dashboard for business people. 
-**Commercial**
-- Revenue
-- Volume
-- Brand performance
-- Channel performance
-- Promotion performance
-- Regional / outlet performance
-**Demand**
-- Actual sales
-- Forecast sales
-- Forecast error
-- Holiday impact
-- Promotion impact
-- Seasonality
-**Supply Chain**
-- Current inventory
-- Days of inventory
-- Reorder point
-- Import lead time
-- Stockout risk
-- Excess inventory risk
+Power BI Dashboard for business people. Three views over all data.
+| Commercial | Demand | Supply Chain |
+|---|---|---|
+| Revenue | Actual sales | Current inventory |
+| Volume | Forecast sales | Days of inventory |
+| Brand performance | Forecast error | Reorder point |
+| Channel performance | Holiday impact | Import lead time |
+| Promotion performance | Promotion impact | Stockout risk |
+| Regional / outlet performance | Seasonality | Excess inventory risk |
+
+
 
 # Quick Start
+
+Prerequisites: Python 3.10+, MySQL 8.0.19+ running locally.
+
+```powershell
+# 1. Install dependencies
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -c "import requests; import mysql.connector; print('Imports OK')"
+```
+
+```sql
+-- 2. In MySQL Workbench, run in order:
+-- sql/00_create_database.sql
+```
+
+```powershell
+# 3. Load Singapore public holidays into MySQL
+.\.venv\Scripts\python.exe scripts\holiday_pipeline.py
+```
+
+```sql
+-- 4. In MySQL Workbench, run in order:
+-- Run: sql/01_verify_and_analyse.sql
+-- row_count should match "Validated ... rows" from step 4
+-- sql/02_build_dim_date.sql
+-- sql/03_build_product_supply.sql
+-- sql/04_create_transaction_tables.sql
+```
+
+```powershell
+# 5. Generate and load the synthetic scenario
+.\.venv\Scripts\python.exe scripts\generate_load_transactions.py
+```
+
+```sql
+-- 6. In MySQL Workbench, verify:
+-- sql/05_verify_transactions.sql
+-- All failed_rows must be 0
+```
+
 # Commands
 # Before You Run it Wide
 # How it Works
-ARCHITECTURE.md - 
+ARCHITECTURE.md - where the data comes from. 
+
+https://www.kaggle.com/competitions/store-sales-time-series-forecasting/data
+https://data.gov.sg/datasets/d_8ef23381f9417e4d4254ee8b4dcdb176/view
+
+As well as synthetic enterprise data.
 # Licence
 
 

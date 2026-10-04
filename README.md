@@ -1,1 +1,24 @@
 # AI-Powered-Beverage-Demand-Supply-Intelligence-Platform
+
+# Inspired by the digital transformation and regional supply-chain challenges of global FMCG and beverage companies.
+
+# Step 1 - A Business Problem
+As a role of Data & AI Business Partner, this company sells 
+-Beer
+-Non-alcoholic beverages
+-SKUs
+-Retail/on-trade/distributor channels
+Asia Pacific Breweries Singapore (APBS), HEINEKEN’s wholly owned subsidiary, will progressively evolve to an import-based supply model over the next two years. So, the products are imported from
+-Malaysia
+-Vietnam
+-China
+-Other regional breweries
+
+Here's a question worth thinking about: How much of each SKU should we import, when should we replenish it, and how can Commercial and Supply Chain teams identify stockout or excess-inventory risks before they happen?
+
+
+
+
+
+
+

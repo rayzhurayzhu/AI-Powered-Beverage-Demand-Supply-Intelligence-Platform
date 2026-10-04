@@ -1,8 +1,6 @@
 # AI-Powered-Beverage-Demand-Supply-Intelligence-Platform
 Inspired by the digital transformation and regional supply-chain challenges of global FMCG and beverage companies.
-
-# What it Does
-Asia Pacific Breweries Singapore (APBS), HEINEKEN’s wholly owned subsidiary, will progressively evolve to an import-based supply model over the next two years. **The products are imported from**
+For example, Asia Pacific Breweries Singapore (APBS), HEINEKEN’s wholly owned subsidiary, will progressively evolve to an import-based supply model over the next two years. **The products are imported from**
 -Malaysia
 -Vietnam
 -China
@@ -15,7 +13,32 @@ Asia Pacific Breweries Singapore (APBS), HEINEKEN’s wholly owned subsidiary, w
 
 **Channles**: Retail/on-trade/distributor channels
 
-As a role of Data & AI Business Partner, here's a business priority worth thinking about and solving: How much of each SKU should we import, when should we replenish it, and how can Commercial and Supply Chain teams identify stockout or excess-inventory risks before they happen?
+# What it Does
+As a role of Data & AI Business Partner in APBS, in this project,
+Says how much of each SKU we should import, when we should replenish it, and how Commercial and Supply Chain teams can identify stockout or excess-inventory risks before they happen.
+
+Power BI Dashboard for business people. 
+Commercial
+- Revenue
+- Volume
+- Brand performance
+- Channel performance
+- Promotion performance
+- Regional / outlet performance
+Demand
+- Actual sales
+- Forecast sales
+- Forecast error
+- Holiday impact
+- Promotion impact
+- Seasonality
+Supply Chain
+- Current inventory
+- Days of inventory
+- Reorder point
+- Import lead time
+- Stockout risk
+- Excess inventory risk
 
 # Quick Start
 # Commands

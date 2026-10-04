@@ -377,6 +377,169 @@ Once this step passes, use the selected daily forecast with dated open POs and c
 
 
 
+# Step 6 — Inventory risk and replenishment decisions
+
+## Business purpose
+
+How much of each SKU should we import, when should we replenish it, and how can Commercial and Supply Chain teams identify stockout or excess-inventory risks before they happen?
+
+Step 6 joins the verified Step 5 daily forecast with physical inventory, dated open purchase orders, supplier lead times and ordering constraints. It produces **one proposed order per SKU for the next decision cycle**, plus daily before/after projections and stress tests. It does not create or submit purchase orders.
+
+All business data and policy parameters are synthetic. The business cutoff remains **end of 2026-09-30**, regardless of today's calendar date. Dates such as a proposed 2026-09-30 order are scenario decisions, not instructions to place a real order retrospectively.
+
+## 1. Merge the package into the existing project
+
+Copy this package's `scripts`, `sql`, `docs`, and `tests` folders and this README into the existing project root. Retain all previous files. Do not create a new project or virtual environment.
+
+These two scripts must be together in the project's `scripts` folder:
+
+```text
+run_forecast_baselines.py       # Existing Step 5 file; retain it.
+run_replenishment_planner.py    # New Step 6 file.
+```
+
+The new script imports the existing Step 5 module to verify forecast freshness. No new Python packages are required.
+
+## 2. Create the planning tables in MySQL Workbench
+
+Execute all of:
+
+```text
+sql/08_create_planning_tables.sql
+```
+
+Expect:
+
+```text
+PLANNING TABLES READY
+```
+
+New objects are `planning_run`, `fact_replenishment_recommendation`, `fact_inventory_projection`, `replenishment_sensitivity`, and `vw_replenishment_decisions`.
+
+The view includes friendly model labels: **28-Day Average**, **8-Week Weekday Average**, and **Same Day Last Week**. Internal model identifiers stay unchanged.
+
+## 3. Run Python in VS Code PowerShell
+
+```powershell
+cd "C:\Users\kissg\Downloads\Beverage_Pipeline_Step1"
+Test-Path .\scripts\run_replenishment_planner.py
+Test-Path .\scripts\run_forecast_baselines.py
+.\.venv\Scripts\python.exe scripts\run_replenishment_planner.py
+```
+
+Both path checks should return `True`. Enter the local MySQL root password when prompted; typed characters are hidden.
+
+Expected output includes:
+
+```text
+fact_replenishment_recommendation: 6 rows
+fact_inventory_projection: 4032 rows
+replenishment_sensitivity: 24 rows
+PLANNER VALIDATION OK
+```
+
+After a successful MySQL commit:
+
+```text
+REPLENISHMENT PIPELINE OK
+Next: run sql/09_verify_replenishment.sql in MySQL Workbench.
+```
+
+## 4. Verify in MySQL Workbench
+
+Execute the entire file:
+
+```text
+sql/09_verify_replenishment.sql
+```
+
+Select each of the five result tabs.
+
+| Result | Expected |
+|---|---|
+| 1: counts | planning_run 1; recommendations 6; daily projections 4032; sensitivity 24 |
+| 2: integrity checks | 17 checks, all `failed_rows = 0` |
+| 3: business decisions | Six SKU rows with stock, inbound, first shortage, proposed order/arrival, cases, units, cost and action |
+| 4: sensitivity | 24 rows: six SKUs × four scenarios |
+| 5: daily example | 28 rows: SKU 001, first 14 dates × two supply paths |
+
+**Zero failed integrity checks does not mean zero stockout risk.** The planner deliberately preserves shortages that normal lead-time replenishment cannot resolve.
+
+## 5. Interpret the decisions
+
+| Action code | Display meaning | Planner's next action |
+|---|---|---|
+| `EXPEDITE_REVIEW` | Review urgent supply options | Review the early shortage with Supply Chain and Commercial. Normal imports cannot remove it. Evaluate feasible expedite/transfer/allocation options manually. |
+| `ORDER_EARLY` | Bring the order review forward | Review a proposed order at the cutoff rather than waiting for the scheduled review. Normal lead time is unchanged. |
+| `ORDER_AT_REVIEW` | Order at scheduled review | Review the proposed cases and cost at the specified review date. |
+| `REVIEW_EXCESS` | Review excess committed supply | No additional order in this cycle; review stock and existing inbound commitments against the maximum-cover demand window. |
+| `MONITOR` | Monitor at the next review | No additional order is needed for this cycle under the base assumptions. Continue monitoring. |
+
+A row can have both a timing shortage and excess committed supply. Read the quantitative columns, not just the single priority action label. `EXPEDITE_REVIEW` is a request for human review; it is not a confirmed expedited shipment.
+
+### Reference results for the unchanged demo
+
+| SKU | Recommended cases | Individual units | Proposed order | Proposed normal arrival | Priority action |
+|---|---:|---:|---|---|---|
+| DEMO-BEV-001 | 40 | 960 | 2026-09-30 | 2026-10-21 | EXPEDITE_REVIEW |
+| DEMO-BEV-002 | 20 | 480 | 2026-10-05 | 2026-10-26 | ORDER_AT_REVIEW |
+| DEMO-BEV-003 | 30 | 720 | 2026-10-05 | 2026-11-02 | ORDER_AT_REVIEW |
+| DEMO-BEV-004 | 0 | 0 | NULL | NULL | MONITOR |
+| DEMO-BEV-005 | 0 | 0 | NULL | NULL | REVIEW_EXCESS |
+| DEMO-BEV-006 | 70 | 840 | 2026-10-05 | 2026-11-02 | ORDER_AT_REVIEW |
+
+These are computed outputs, not hard-coded decisions. If the verified inputs differ, results can change. Zero-order rows correctly have NULL proposed dates; do not convert them into fake purchase orders.
+
+SKU 001 first faces a projected shortage on **2026-10-04** with existing POs. A normal new order from the cutoff arrives on **2026-10-21**, leaving **21.1875 expected units** of unmet demand before that arrival in this base scenario. The 960-unit recommendation supports the subsequent replenishment cycle; it does not fix the earlier gap.
+
+SKU 005 has **961.8750 expected units** of committed supply above its next 60 days of forecast demand. This measure includes existing stock and POs arriving within that window. It is not a claim that current physical stock alone exceeds 60 days, nor an estimate of expiry loss.
+
+## 6. Understand the stress tests
+
+The four scenarios are base demand, demand +20%, demand -20%, and arrivals delayed 7 days. The demand factors and delay are illustrative assumptions, not estimated probabilities or prediction intervals. The delay affects both existing inbound and the proposed normal order.
+
+Each scenario has two paths:
+
+- `existing_only`: physical stock and existing POs; no additional orders;
+- `with_recommendation`: the same starting supply plus this one proposed order.
+
+The base recommendation's date and quantity remain fixed in all scenarios. We test its sensitivity instead of secretly optimizing a different order for each scenario.
+
+`unmet_cycle_*` includes all shortages from the day after the cutoff through the base cycle end, including the unavoidable pre-arrival gap. Late-horizon shortages are expected if no subsequent orders are simulated. This is not a full 84-day rolling ordering policy or a realized savings calculation.
+
+## 7. Inspect the generated files
+
+In VS Code, expand `data > processed > planner_v1_20260930`:
+
+- `fact_replenishment_recommendation.csv`;
+- `fact_inventory_projection.csv`;
+- `replenishment_sensitivity.csv`;
+- `manifest.json`, containing forecast/source identity, input snapshots, policies and hashes.
+
+Keep source, SQL, tests and English docs in GitHub. Continue using the project's ignore rules for generated data and the virtual environment. No password is stored in the script or manifest.
+
+## Reruns and troubleshooting
+
+- To repeat **this step**, rerun the Step 6 Python command. It transactionally refreshes only `planner_v1_20260930`; historical sales, inventory, POs and forecasts remain unchanged.
+- Do not run a source or forecast refresh at the same time. Inputs are read under one consistent database snapshot; this MVP assumes a single writer.
+- Step 5's forecast now has a dependent planning run. The old Step 5 refresh deletes/recreates its parent row; MySQL will reject that refresh while this dependency exists and roll its transaction back. Likewise, Step 4's scenario is protected by forecasts. Do not disable foreign keys or drop tables. A later automation step will coordinate source → forecast → planner refreshes or introduce new run IDs.
+- If the script reports stale forecast inputs or modified production forecasts, stop and resolve the source/version mismatch rather than using mixed results.
+- A past-due open PO is rejected until a credible future ETA is supplied. The script does not assume that overdue stock is already available, or silently drop it.
+- `No module named run_forecast_baselines`: place both scripts in the same existing `scripts` folder.
+- `No module named mysql`: use the project's `.venv` interpreter as shown above.
+- Missing table/view: execute all of SQL 08 first. Check that Steps 4 and 5 were committed in the same database.
+- Password/connection errors: use the same credentials and running MySQL service as previous steps.
+- `--generate-only` reads MySQL and writes local files but does not load planner tables. Files may exist even if a later database load failed; require the pipeline success message and SQL checks.
+
+Optional source tests, from the project root:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p test_replenishment_planner.py -v
+```
+
+## Next platform stage
+
+After these results pass, prepare the governed Commercial/Supply Chain reporting layer and the Power BI pages, using explicit run/scenario filters. Later add the grounded AI functions, a fair rolling-policy simulation for the business case, UAT and handover documentation. A baseline challenger can be introduced with separate temporal evaluation; it must not overwrite the meaning of the existing holdout results.
 
 
 

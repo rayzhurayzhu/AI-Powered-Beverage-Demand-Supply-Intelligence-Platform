@@ -83,8 +83,6 @@ As well as synthetic enterprise data.
 # Licence
 
 
-
-
 # Step 4 — Synthetic Sales, Inventory and Purchase Orders
 
 This module extends the Beverage Demand & Supply Decision Platform with reconciled business transactions. It supports the original questions: how much to import, when to replenish, and how to identify stockout or excess-inventory risks before they happen.

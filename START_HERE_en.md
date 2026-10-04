@@ -1,4 +1,4 @@
-# Beverage Demand & Supply Intelligence — Your First Working Pipeline
+# Beverage Demand & Supply Intelligence — Working Pipeline
 
 Goal: retrieve public holidays from a Singapore government API, save the raw JSON, validate and organize the data with Python, load it into MySQL, and then query and export the results using SQL. Once this runs successfully, you will have a reusable external-data ingestion module. Forecasting, inventory recommendations, and AI question answering come in later stages.
 

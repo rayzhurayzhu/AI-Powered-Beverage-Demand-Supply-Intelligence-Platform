@@ -1,0 +1,2 @@
+requests==2.34.2
+mysql-connector-python==26.7.0

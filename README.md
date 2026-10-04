@@ -1,6 +1,7 @@
 # AI-Powered-Beverage-Demand-Supply-Intelligence-Platform
 
-# Inspired by the digital transformation and regional supply-chain challenges of global FMCG and beverage companies.
+# Overview
+Inspired by the digital transformation and regional supply-chain challenges of global FMCG and beverage companies.
 
 # Step 1 - A Business Problem
 As a role of Data & AI Business Partner, this company sells 

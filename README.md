@@ -16,6 +16,30 @@ Asia Pacific Breweries Singapore (APBS), HEINEKEN’s wholly owned subsidiary, w
 
 Here's a question worth thinking about: How much of each SKU should we import, when should we replenish it, and how can Commercial and Supply Chain teams identify stockout or excess-inventory risks before they happen?
 
+# Step * Outcome - Beverage Demand & Supply Decision Platform.pbix
+Commercial
+- Revenue
+- Volume
+- Brand performance
+- Channel performance
+- Promotion performance
+- Regional / outlet performance
+Demand
+- Actual sales
+- Forecast sales
+- Forecast error
+- Holiday impact
+- Promotion impact
+- Seasonality
+Supply Chain
+- Current inventory
+- Days of inventory
+- Reorder point
+- Import lead time
+- Stockout risk
+- Excess inventory risk
+
+
 
 
 

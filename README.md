@@ -29,7 +29,6 @@ Power BI Dashboard for business people. Three views over all data.
 | Regional / outlet performance | Seasonality | Excess inventory risk |
 
 
-
 # Quick Start
 
 Prerequisites: Python 3.10+, MySQL 8.0.19+ running locally.
@@ -71,7 +70,8 @@ py -m venv .venv
 -- All failed_rows must be 0
 ```
 
-# Commands
+# Data Modelling Concepts
+
 # Before You Run it Wide
 # How it Works
 ARCHITECTURE.md - where the data comes from. 

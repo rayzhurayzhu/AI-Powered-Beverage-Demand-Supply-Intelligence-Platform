@@ -14,25 +14,25 @@ For example, Asia Pacific Breweries Singapore (APBS), HEINEKEN’s wholly owned 
 **Channles**: Retail/on-trade/distributor channels
 
 # What it Does
-As a role of Data & AI Business Partner in APBS, in this project,
+As a role of Data & AI Business Partner in APBS, in this project.
 Says how much of each SKU we should import, when we should replenish it, and how Commercial and Supply Chain teams can identify stockout or excess-inventory risks before they happen.
 
 Power BI Dashboard for business people. 
-Commercial
+**Commercial**
 - Revenue
 - Volume
 - Brand performance
 - Channel performance
 - Promotion performance
 - Regional / outlet performance
-Demand
+**Demand**
 - Actual sales
 - Forecast sales
 - Forecast error
 - Holiday impact
 - Promotion impact
 - Seasonality
-Supply Chain
+**Supply Chain**
 - Current inventory
 - Days of inventory
 - Reorder point

@@ -246,28 +246,135 @@ After local acceptance passes, your project can accurately state that it generat
 
 Next, build and backtest a baseline demand forecast, then use dated receipts and projected daily stock to evaluate replenishment, shortage and overstock decisions. Preserve the original business scope: quantity, timing, stockout risk and excess-inventory risk. Supplier delays, expiry, partial receipts and constrained optimization remain later extensions.
 
-# Step * Outcome - Beverage Demand & Supply Decision Platform.pbix
-Commercial
-- Revenue
-- Volume
-- Brand performance
-- Channel performance
-- Promotion performance
-- Regional / outlet performance
-Demand
-- Actual sales
-- Forecast sales
-- Forecast error
-- Holiday impact
-- Promotion impact
-- Seasonality
-Supply Chain
-- Current inventory
-- Days of inventory
-- Reorder point
-- Import lead time
-- Stockout risk
-- Excess inventory risk
+# Step 5 — Forecast baselines for import and replenishment planning
+
+## Business purpose
+
+How much of each SKU should we import, when should we replenish it, and how can Commercial and Supply Chain teams identify stockout or excess-inventory risks before they happen?
+
+This step produces the demand-planning input to that decision. It does **not** yet issue purchase recommendations. All business transactions are synthetic Singapore beverage data. They are not APB data or evidence of actual company performance.
+
+## Prerequisites
+
+Steps 1–4 must have passed. The project already uses MySQL 8 and a Python virtual environment with `mysql-connector-python`. No new packages are required. Keep using the existing `beverage_intelligence` database.
+
+Scenario: `beverage_demo_v1`. Fixed business cutoff: end of **2026-09-30**. The computer's current date does not change the scenario.
+
+## 1. Copy the files into the existing project
+
+Extract this ZIP into a temporary folder. Copy its `scripts`, `sql`, `docs`, and `tests` folders and this README into your existing project root. Merge folders; retain files from previous steps. Do not create a second project or virtual environment.
+
+The new Python file must be at:
+
+```text
+Beverage_Pipeline_Step1/scripts/run_forecast_baselines.py
+```
+
+## 2. Create the forecast tables in MySQL Workbench
+
+Open `sql/06_create_forecast_tables.sql` in your existing MySQL connection. Execute the entire file. Expect:
+
+```text
+FORECAST TABLES READY
+```
+
+This creates `forecast_run`, `fact_forecast`, `forecast_evaluation`, `forecast_model_selection`, and a daily production forecast view. It does not change historical sales, stock, orders, or supply policies.
+
+## 3. Run Python in VS Code PowerShell
+
+Use Terminal > New Terminal, then run:
+
+```powershell
+cd "C:\Users\kissg\Downloads\Beverage_Pipeline_Step1"
+Test-Path .\scripts\run_forecast_baselines.py
+.\.venv\Scripts\python.exe scripts\run_forecast_baselines.py
+```
+
+`Test-Path` should print `True`. Enter your local MySQL root password at the prompt. No characters are displayed while you type the password.
+
+Expected counts and success messages:
+
+```text
+fact_forecast: 3024 rows
+forecast_evaluation: 144 rows
+forecast_model_selection: 6 rows
+FORECAST VALIDATION OK
+```
+
+The script also prints the model chosen for each SKU, validation/holdout WAPE, and the number of excluded holdout days. After saving the files and committing to MySQL, it prints:
+
+```text
+FORECAST PIPELINE OK
+Next: run sql/07_verify_forecasts.sql in MySQL Workbench.
+```
+
+The script contains all imports, queries, models, validation, password handling, and database-loading code. There are no missing functions or placeholder URLs.
+
+## 4. Verify in MySQL Workbench
+
+Open and execute all of `sql/07_verify_forecasts.sql`. Workbench produces **five result tabs**. Select each tab explicitly; the last tab may be displayed by default.
+
+| Result | Expected |
+|---|---|
+| 1: counts | forecast_run 1; fact_forecast 3024; forecast_evaluation 144; forecast_model_selection 6; production_forecast_rows 504 |
+| 2: integrity checks | 10 checks, every `failed_rows` value equals 0 |
+| 3: selected models | 6 SKUs; validation WAPE, holdout WAPE/bias and excluded days |
+| 4: forecast totals | 6 SKUs; each has 84 days, 2026-10-01 through 2026-12-23 |
+| 5: holdout evaluation | 12 rows; two scoring scopes for each selected SKU/model |
+
+Do not confuse a blank editable `NULL` row in Workbench with a stored data row. Nonzero forecast errors are expected; the data-quality checks must be zero. Passing these checks does not certify forecast accuracy or business value.
+
+## 5. Inspect the local outputs
+
+Expand `data > processed > baseline_v1_20260930` in VS Code:
+
+- `fact_forecast.csv`: historical backtest predictions and future planning predictions;
+- `forecast_evaluation.csv`: errors for each candidate, fold, and evaluation scope;
+- `forecast_model_selection.csv`: one selected model per SKU/warehouse;
+- `manifest.json`: input fingerprint, policies, assumptions and CSV hashes.
+
+Counts: 6 SKUs × 3 models × 4 folds × 35 days = 2,520 backtest rows; 6 × 84 = 504 production rows; total = 3,024. Evaluation: 6 × 3 × 4 × 2 = 144 rows.
+
+Keep the project's existing ignore rules for generated `data/` and `.venv/`. Commit source, SQL, tests and English documentation to GitHub. Do not commit a database password. The script prompts for it rather than storing it.
+
+## What the forecast means
+
+The three candidates are a trailing 28-day mean, an 8-week mean by weekday, and the previous week's weekday value repeated forward. These are statistical baselines. They establish a reproducible benchmark before adding feature models or GenAI.
+
+Sales are constrained by available inventory. A zero closing balance marks a potentially censored day; it does not prove the amount of lost demand. In training, flagged observations are replaced using only earlier non-flagged observations. Scores are stored both across all days and after excluding flagged target days. No method in this package reconstructs verified true demand.
+
+Models are selected using three 35-day validation windows. The last 35 days are a separate holdout. The holdout never selects a model. We forecast 84 days for planning, but only the 35-day horizon has been backtested; longer-horizon quality has not been established.
+
+The first planning window covers each SKU's lead time plus review interval: 28 days for a 21-day lead, or 35 days for a 28-day lead, with a 7-day review. Fourteen-day totals are an urgency view, not the import planning horizon.
+
+WAPE is an error percentage; do not label `100 - WAPE` as universal forecast accuracy. Bias is positive for overforecast and negative for underforecast. Read MAE in individual units per day. The holdout scores shown in Result 3 exclude flagged days; Result 5 provides both scopes.
+
+## Repeat runs and troubleshooting
+
+- Repeating the Python command refreshes only `baseline_v1_20260930` in one transaction. Run one instance at a time. Other forecast runs and all historical facts are retained.
+- The scenario now has dependent forecasts. The old Step 4 loader deletes and recreates its scenario row, so MySQL will block that refresh once forecasts exist. This is intentional referential protection. Do not disable foreign-key checks. To revise source data later, use a coordinated source/forecast rebuild; the current step does not require rerunning Step 4.
+- If an insert fails, the database transaction is rolled back; CSVs may already exist, so CSV presence alone does not prove a successful database load.
+- `Access denied`: check the MySQL user/password. `Can't connect`: check that the local MySQL service is running.
+- Missing forecast table/view: execute all of SQL 06 before the Python command.
+- Missing history or a sales/inventory mismatch: resolve the Step 4 verification issue first.
+- `No module named mysql`: use the existing project's `.venv` Python shown above. Do not switch Python interpreters.
+- A SQL foreign-key error while rerunning a source step: retain the error message and resolve the dependency; do not drop tables or turn off checks.
+- `--generate-only` still reads MySQL; it writes local files but does not load forecast tables.
+
+## Optional source-code tests
+
+From the project root, in PowerShell:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p test_forecast_baselines.py -v
+```
+
+These tests check leakage, imputation, weekly patterns, selection, metrics, repeatability, input gaps, and transaction rollback. They do not replace the local MySQL checks.
+
+## Next decision layer
+
+Once this step passes, use the selected daily forecast with dated open POs and closing inventory to project daily stock. Then calculate required import cases, order timing, shortages before normal arrivals, and excess-stock exceptions. Respect case sizes, MOQ, order multiples and review schedules. See `docs/platform_delivery_plan.md` for the complete business-to-delivery path.
+
 
 
 

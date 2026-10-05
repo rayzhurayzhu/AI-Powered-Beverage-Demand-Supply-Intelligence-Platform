@@ -542,6 +542,149 @@ Optional source tests, from the project root:
 After these results pass, prepare the governed Commercial/Supply Chain reporting layer and the Power BI pages, using explicit run/scenario filters. Later add the grounded AI functions, a fair rolling-policy simulation for the business case, UAT and handover documentation. A baseline challenger can be introduced with separate temporal evaluation; it must not overwrite the meaning of the existing holdout results.
 
 
+# Step 7 — Governed reporting data and Power BI
+
+## Outcome
+
+Create a reproducible report data snapshot and build the first Power BI page, **Executive Overview**. The same model supports Commercial Performance, Supply Chain Decisions and Forecast & Insights. The package includes complete Python/SQL/Power Query code and DAX measures, plus a detailed Desktop build guide. It does not contain a prebuilt `.pbix` report or a deployed AI copilot.
+
+The business goal remains: how much to import, when to replenish, and how to spot shortages/excess before they happen. Sales cards provide commercial context; the action table links forecasts and supply to the next planner decision.
+
+## Prerequisites
+
+Steps 1–6 have passed in MySQL. Keep `run_forecast_baselines.py` and `run_replenishment_planner.py` in the existing `scripts` folder. Use the same Python `.venv` and MySQL database. No new Python packages or Power BI MySQL driver are needed for this CSV-import path. Power BI Desktop runs on your Windows computer.
+
+The business cutoff stays 2026-09-30. Export timestamps describe when files were created; they do not advance the scenario's business date.
+
+## 1. Merge files
+
+Copy the package folders `scripts`, `sql`, `powerbi`, `docs`, `tests` and this README into your current project root:
+
+```text
+C:\Users\kissg\Downloads\Beverage_Pipeline_Step1
+```
+
+Merge folders and retain earlier files. The new exporter belongs beside the two existing forecast/planner scripts.
+
+## 2. Create and verify reporting views
+
+In MySQL Workbench, execute all of `sql/10_create_bi_views.sql`. Expect:
+
+```text
+BI VIEWS READY
+```
+
+Then execute all of `sql/11_verify_bi_views.sql`. There are five result tabs:
+
+1. Eleven view counts. Each `row_count` must equal the adjacent `expected_count`.
+2. Eight checks, all zero.
+3. Eight reference KPI values for the Executive Overview, with no SKU/brand filter.
+4. Six decision rows.
+5. Two forecast phases: holdout 210 rows, 2026-08-27 to 2026-09-30; production 504 rows, 2026-10-01 to 2026-12-23.
+
+## 3. Export the validated snapshot
+
+In VS Code PowerShell:
+
+```powershell
+cd "C:\Users\kissg\Downloads\Beverage_Pipeline_Step1"
+Test-Path .\scripts\export_powerbi_snapshot.py
+Test-Path .\scripts\run_forecast_baselines.py
+Test-Path .\scripts\run_replenishment_planner.py
+```
+
+All three should return `True`. Then:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\export_powerbi_snapshot.py
+```
+
+Enter the MySQL password. Expect eleven table counts followed by:
+
+```text
+BI EXPORT VALIDATION OK
+```
+
+The script prints the actual export folder, the Power BI root path, and the eight reference KPIs. Final success:
+
+```text
+POWER BI EXPORT OK
+```
+
+It reads a consistent database snapshot, verifies the forecast and planner against their inputs, writes eleven CSVs plus a manifest into a new immutable export folder, validates the CSVs, and then atomically updates `data/powerbi/latest_export.json`. It does not modify database facts. Existing export folders are retained.
+
+## 4. Build Power BI
+
+Open `powerbi/BUILD_REPORT.md` and follow sections **A–F** in order:
+
+1. Create/save a blank report.
+2. Add the supplied path parameter and bundle-loader queries.
+3. Add eleven table queries from the provided `.m` files.
+4. Create fourteen explicit relationships and mark the date table.
+5. Add DAX measures 1–10 from `powerbi/MEASURES.md`.
+6. Build eight KPI cards and the six-SKU action table.
+
+The `.m` files are text containing Power Query code. Open them in VS Code, copy their complete contents into Power Query's Advanced Editor, and name each query as instructed. Do not import `.m` files as CSVs. DAX formulas belong in Power BI New measure, not in Python, SQL or Power Query.
+
+## Expected Executive Overview values
+
+For the unchanged demo and no slicer selection:
+
+| Card | Expected display |
+|---|---:|
+| Revenue — Last 28 Days (SGD) | 32,470.91 |
+| Outbound Units — Last 28 Days | 15,098 |
+| Holdout WAPE — Available Stock Days | 11.82% |
+| SKUs at Stockout Risk — Next 14 Days | 1 |
+| Physical Stock — Units | 10,314 |
+| Existing Inbound — Units | 13,440 |
+| Proposed Normal Imports — SGD | 4,650.00 |
+| SKUs with Excess Committed Supply | 1 |
+
+The unrounded pooled WAPE ratio is approximately 0.1181533858. Power BI Percentage formatting displays 11.82%. Do not average the six SKU WAPE percentages or multiply a ratio by 100 and then apply Percentage formatting.
+
+Revenue and units use 2026-09-03 through 2026-09-30 inclusive. Forecast error uses the selected-model holdout on available-stock SKU-days. Inventory/decision values are snapshots at the cutoff. These are deliberately different periods and are labeled separately.
+
+## Interpretation and scope
+
+- All enterprise transactions and supply policies are synthetic. Do not claim real-company results.
+- One SKU has near-term shortage risk. This is one out of six SKUs under this scenario, not a measured 16.7% historical stockout rate.
+- The SGD 4,650 proposed purchase amount is not savings, profit or an approved PO.
+- Excess committed supply includes POs within the cover window. It is not a spoilage estimate.
+- Stock quantities should not be summed over dates; projection scenarios and supply paths should not be summed together.
+- The report imports only selected-model holdout and production forecasts from one named run. It does not mix candidate-model rows into a forecast total.
+- Forecasts and stock pool channels. Channel slicers belong to Commercial Performance only.
+- Power BI imports a verified snapshot. It is not a live operational system or a scheduled cloud refresh at this stage.
+
+## Refresh
+
+After a successful new Step 7 export, use Home > Refresh in Power BI Desktop. Keep `pDataRoot` pointing to the stable `data\powerbi` parent directory. Do not export while Desktop is refreshing.
+
+Step 7 can be rerun safely with unchanged verified upstream inputs. If historical inputs, policies or forecasts change, first coordinate rebuilding their dependencies. Existing Step 4/5 parent-delete refreshes are protected by foreign keys once descendants exist; do not disable those checks.
+
+## Troubleshooting
+
+- SQL view missing: run the whole SQL 10 file first.
+- Stale forecast/planning message: resolve the source/run mismatch; do not use mixed snapshots.
+- Python import error for an earlier script: keep all three scripts in the same `scripts` folder.
+- `latest_export.json` not found: require `POWER BI EXPORT OK` first and check the root parameter.
+- Power Query schema/batch mismatch: retain generated files unchanged and export again after resolving the underlying issue.
+- Blank production actuals, zero-order dates, or no-shortage dates: legitimate nulls; do not replace them with zeros.
+- SQL counts match but Power BI cards do not: check relationships, slicers, date windows, measure versus raw-column selection, and percentage formatting.
+- Projection measure blank: select exactly one stress scenario and one supply path.
+- Cards show rounded `K` values: set display units to None during reconciliation.
+
+Optional Python tests:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p test_bi_export.py -v
+```
+
+## What to send back
+
+First send SQL 11 Result 1, Result 2, and Result 3, plus confirmation of `POWER BI EXPORT OK`. After the Desktop build, send Model view and Executive Overview screenshots. This separates data-contract issues from report-model/visual issues.
+
+After the first page reconciles, finish the remaining three pages using section G of BUILD_REPORT.md. Later steps add the grounded AI functions, a fair business-value simulation, coordinated pipeline refresh, UAT evidence and GitHub handover.
 
 
 

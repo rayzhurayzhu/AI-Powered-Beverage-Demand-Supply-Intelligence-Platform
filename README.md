@@ -70,18 +70,13 @@ py -m venv .venv
 -- All failed_rows must be 0
 ```
 
-# Data Modelling Concepts
 
-# Before You Run it Wide
-# How it Works
-ARCHITECTURE.md - where the data comes from. 
+# Where the data comes from. 
 
 https://www.kaggle.com/competitions/store-sales-time-series-forecasting/data
 https://data.gov.sg/datasets/d_8ef23381f9417e4d4254ee8b4dcdb176/view
 
 As well as synthetic enterprise data.
-# Licence
-
 
 # Step 4 — Synthetic Sales, Inventory and Purchase Orders
 
